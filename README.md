@@ -713,21 +713,94 @@ docker stats
 ## 4-2. Dockerfile
 
 ```dockerfile
-# 여기에 최종 Dockerfile 붙여넣기
+FROM nginx:alpine
+LABEL org.opencontainers.image.title="my-custom-nginx"
+LABEL org.opencontainers.image.author="hkk"
+
+ENV APP_ENV=dev
+
+# 웹 콘텐츠 복사
+COPY app/ /usr/share/nginx/html/
+
+# 포트 노출 명시적으로 작성
+EXPOSE 80
 ```
 
 ## 4-3. 빌드/실행 로그
 
 ```bash
-docker build -t my-web:1.0 .
-docker run -d --name my-web -p 8080:80 my-web:1.0
-docker ps
-docker logs my-web
+$ docker build -t my-web:1.0 .
+[+] Building 7.4s (7/7) FINISHED                                                                    docker:orbstack
+ => [internal] load build definition from Dockerfile                                                           0.2s
+ => => transferring dockerfile: 296B                                                                           0.0s
+ => [internal] load metadata for docker.io/library/nginx:alpine                                                2.6s
+ => [internal] load .dockerignore                                                                              0.2s
+ => => transferring context: 2B                                                                                0.0s
+ => [internal] load build context                                                                              0.2s
+ => => transferring context: 464B                                                                              0.0s
+ => [1/2] FROM docker.io/library/nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203c  3.6s
+ => => resolve docker.io/library/nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203c  0.2s
+ => => sha256:7e89aa6cabfc80f566b1b77b981f4bb98413bd2d513ca9a30f63fe58b4af6903 2.50kB / 2.50kB                 0.0s
+ => => sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1 10.33kB / 10.33kB               0.0s
+ => => sha256:d5030d429039a823bef4164df2fad7a0defb8d00c98c1136aec06701871197c2 12.32kB / 12.32kB               0.0s
+ => => sha256:589002ba0eaed121a1dbf42f6648f29e5be55d5c8a6ee0f8eaa0285cc21ac153 3.86MB / 3.86MB                 0.5s
+ => => sha256:8892f80f46a05d59a4cde3bcbb1dd26ed2441d4214870a4a7b318eaa476a0a54 1.87MB / 1.87MB                 0.7s
+ => => sha256:91d1c9c22f2c631288354fadb2decc448ce151d7a197c167b206588e09dcd50a 626B / 626B                     0.9s
+ => => extracting sha256:589002ba0eaed121a1dbf42f6648f29e5be55d5c8a6ee0f8eaa0285cc21ac153                      0.1s
+ => => sha256:cf1159c696ee2a72b85634360dbada071db61bceaad253db7fda65c45a58414c 953B / 953B                     1.0s
+ => => extracting sha256:8892f80f46a05d59a4cde3bcbb1dd26ed2441d4214870a4a7b318eaa476a0a54                      0.1s
+ => => sha256:3f4ad4352d4f91018e2b4910b9db24c08e70192c3b75d0d6fff0120c838aa0bb 402B / 402B                     1.2s
+ => => sha256:c2bd5ab177271dd59f19a46c214b1327f5c428cd075437ec0155ae71d0cdadc1 1.21kB / 1.21kB                 1.3s
+ => => extracting sha256:91d1c9c22f2c631288354fadb2decc448ce151d7a197c167b206588e09dcd50a                      0.0s
+ => => extracting sha256:cf1159c696ee2a72b85634360dbada071db61bceaad253db7fda65c45a58414c                      0.0s
+ => => sha256:4d9d41f3822d171ccc5f2cdfd75ad846ac4c7ed1cd36fb998fe2c0ce4501647b 1.40kB / 1.40kB                 1.5s
+ => => extracting sha256:3f4ad4352d4f91018e2b4910b9db24c08e70192c3b75d0d6fff0120c838aa0bb                      0.0s
+ => => sha256:3370263bc02adcf5c4f51831d2bf1d54dbf9a6a80b0bf32c5c9b9400630eaa08 20.25MB / 20.25MB               2.0s
+ => => extracting sha256:c2bd5ab177271dd59f19a46c214b1327f5c428cd075437ec0155ae71d0cdadc1                      0.0s
+ => => extracting sha256:4d9d41f3822d171ccc5f2cdfd75ad846ac4c7ed1cd36fb998fe2c0ce4501647b                      0.0s
+ => => extracting sha256:3370263bc02adcf5c4f51831d2bf1d54dbf9a6a80b0bf32c5c9b9400630eaa08                      0.4s
+ => [2/2] COPY app/ /usr/share/nginx/html/                                                                     0.3s
+ => exporting to image                                                                                         0.2s
+ => => exporting layers                                                                                        0.1s
+ => => writing image sha256:ee932089033b82a027b5b0d3a07d1df7563f4cfbf08d1dfe2b7819002c387484                   0.0s
+ => => naming to docker.io/library/my-web:1.0                                                                  0.0s
+
+
+$ docker images
+REPOSITORY   TAG       IMAGE ID       CREATED         SIZE
+my-web       1.0       ee932089033b   7 minutes ago   62.2MB
+
+$ docker run -d --name my-web -p 8080:80 my-web:1.0
+5522ca90b323a8811268f786c77c46919d80c3cee1a18c0a0ebce158624423cc
+# 컨테이너 id(고유 식별자)
+$ docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                     NAMES
+5522ca90b323   my-web:1.0   "/docker-entrypoint.…"   2 minutes ago   Up 2 minutes   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   my-web
+
+$ docker logs my-web
+/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+/docker-entrypoint.sh: Configuration complete; ready for start up
+2026/04/02 07:39:50 [notice] 1#1: using the "epoll" event method
+2026/04/02 07:39:50 [notice] 1#1: nginx/1.29.7
+2026/04/02 07:39:50 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
+2026/04/02 07:39:50 [notice] 1#1: OS: Linux 6.17.8-orbstack-00308-g8f9c941121b1
+2026/04/02 07:39:50 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 20480:1048576
+2026/04/02 07:39:50 [notice] 1#1: start worker processes
+2026/04/02 07:39:50 [notice] 1#1: start worker process 30
+2026/04/02 07:39:50 [notice] 1#1: start worker process 31
+2026/04/02 07:39:50 [notice] 1#1: start worker process 32
+2026/04/02 07:39:50 [notice] 1#1: start worker process 33
+2026/04/02 07:39:50 [notice] 1#1: start worker process 34
+2026/04/02 07:39:50 [notice] 1#1: start worker process 35
 ```
 
-```text
-# 실행 결과 붙여넣기
-```
 
 ---
 
@@ -737,19 +810,75 @@ docker logs my-web
 
 - 접속 주소: http://localhost:8080
 - 증거 이미지:
-  - ![포트매핑-8080](images/port-8080.png)
+  - ![포트매핑-8080](assets/localhost.png)
 
 ## 5-2. curl 응답
 
 ```bash
-curl http://localhost:8080
-```
+$ curl http://localhost:8080
 
-```text
-# 응답 결과 붙여넣기
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>간단한 HTML 페이지</title>
+  </head>
+  <body>
+    <p>2026 Codyssey Pre-Session</p>
+    <h1>간단한 HTML 페이지</h1>
+    <p>이 페이지는 CSS 없이 순수 HTML만 사용하여 작성되었습니다.</p>
+  </body>
+</html>
 ```
 
 ---
+
+## 5-3. 다른 포트로 접속
+```bash
+$ docker run -d -p 8081:80 --name my-web-8081 my-web:1.0
+6fb8169ee7a8e0b364c78c5d96e69ebf8d2139005bb0626cbbd94be43dc41e42
+$  curl http://localhost:8081
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>간단한 HTML 페이지</title>
+  </head>
+  <body>
+    <p>2026 Codyssey Pre-Session</p>
+    <h1>간단한 HTML 페이지</h1>
+    <p>이 페이지는 CSS 없이 순수 HTML만 사용하여 작성되었습니다.</p>
+  </body>
+</html>
+```
+### 알면 좋은 내용
+
+#### 포트 매핑 이해
+
+```
+호스트 (내 컴퓨터)          컨테이너
+port 8080    ──────────→  port 80
+            (포트 매핑)
+```
+
+**포트 매핑 문법:**
+
+```bash
+-p <호스트_포트>:<컨테이너_포트>
+
+# 예시
+-p 8080:80      # 호스트 8080 → 컨테이너 80
+-p 3000:3000    # 호스트 3000 → 컨테이너 3000
+-p 5432:5432    # 호스트 5432 → 컨테이너 5432 (PostgreSQL)
+```
+
+#### 포트 매핑이 필요한 이유
+
+1. **격리**: 컨테이너는 호스트와 분리된 네트워크 네임스페이스
+2. **접근성**: 호스트에서 컨테이너 서비스에 접근하려면 매핑 필요
+3. **여러 컨테이너**: 같은 컨테이너 포트를 다른 호스트 포트로 매핑 가능
 
 ## 6) 바인드 마운트 & 볼륨 영속성 검증
 
