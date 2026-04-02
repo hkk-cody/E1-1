@@ -1,0 +1,680 @@
+# AI/SW 개발 워크스테이션 구축
+
+## 0) 프로젝트 개요
+
+- 미션 목표 요약:
+  - 본 프로젝트의 목표는 터미널, Docker, Git/GitHub를 직접 설정하고 운영하면서, 재현 가능한 개발 워크스테이션을 구축하는 것입니다.
+  - 단순 설치가 아닌 명령 실행 결과(로그), 접속 검증(포트 매핑), 데이터 유지 검증(볼륨)을 통해 실제 동작을 증명하는 데 중점을 둡니다.
+  - 최종적으로 README만으로도 동일 절차를 따라 같은 결과를 확인할 수 있는 문서화 품질을 확보하는 것을 목표로 합니다.
+- 핵심 도구:
+  - 터미널(CLI)
+  - Docker(컨테이너)
+  - Git/GitHub(버전관리/협업)
+- 학습 범위:
+  - 경로/파일/권한 기반의 리눅스 CLI 기초 조작
+  - Docker 이미지 빌드, 컨테이너 실행/점검, 포트 매핑, 마운트/볼륨 실습
+  - Git 설정, 로컬 커밋, 원격 저장소 연동 및 협업 흐름 이해
+  - 트러블슈팅 기록(문제-원인 가설-검증-해결) 및 보안/민감정보 마스킹 실천
+
+---
+
+## 1) 실행 환경
+
+- OS: macOS (Darwin 24.6.0, x86_64)
+- Shell: /bin/zsh
+- Terminal: zsh (VS Code 통합 터미널)
+- Docker: 28.5.2 (build ecc6942)
+- Git: 2.53.0
+- OrbStack / Docker Desktop: OrbStack (Docker Context: orbstack)
+
+### 1-1. 환경 확인 로그
+
+```bash
+uname -a
+echo $SHELL
+docker --version
+docker info
+git --version
+```
+
+```text
+$ uname -a
+Darwin c5r1s7.codyssey.kr 24.6.0 Darwin Kernel Version 24.6.0: Mon Jan 19 22:00:10 PST 2026; root:xnu-11417.140.69.708.3~1/RELEASE_X86_64 x86_64
+
+$ echo $SHELL
+/bin/zsh
+
+$ docker --version
+Docker version 28.5.2, build ecc6942
+
+$ docker info
+Client:
+ Version:    28.5.2
+ Context:    orbstack
+ Debug Mode: false
+ Plugins:
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.29.1
+  compose: Docker Compose (Docker Inc.)
+    Version:  v2.40.3
+
+Server:
+ Containers: 1
+  Running: 0
+  Paused: 0
+  Stopped: 1
+ Images: 1
+ Server Version: 28.5.2
+ Storage Driver: overlay2
+ Cgroup Version: 2
+ Operating System: OrbStack
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 6
+ Total Memory: 15.67GiB
+ Name: orbstack
+ Docker Root Dir: /var/lib/docker
+ WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set
+
+$ git --version
+git version 2.53.0
+```
+
+---
+
+## 2) 수행 체크리스트
+
+### 2-1. 터미널 기본 조작
+
+- [x] pwd / ls / ls -la
+- [x] mkdir / cd
+- [x] touch / cat
+- [x] cp / mv / rm
+
+### 2-2. 권한 실습
+
+- [x] 파일 권한 변경 (예: 644)
+- [x] 디렉토리 권한 변경 (예: 755)
+- [x] 변경 전/후 비교 기록
+
+### 2-3. Docker 기본 점검
+
+- [x] docker --version
+- [x] docker info
+- [x] docker images
+- [x] docker ps / docker ps -a
+
+### 2-4. 컨테이너 기초
+
+- [x] hello-world 실행
+- [x] ubuntu 컨테이너 진입/명령 실행
+- [ ] attach vs exec 차이 정리
+
+### 2-5. Dockerfile 기반 커스텀 이미지
+
+- [ ] Dockerfile 작성
+- [ ] docker build 성공
+- [ ] docker run 성공
+
+### 2-6. 포트 매핑
+
+- [ ] `-p <host>:<container>` 실행
+- [ ] 브라우저 접속 확인
+- [ ] curl 응답 확인
+
+### 2-7. 마운트/볼륨
+
+- [ ] 바인드 마운트 변경 반영 확인
+- [ ] 볼륨 영속성(삭제 전/후) 확인
+
+### 2-8. Git/GitHub 연동
+
+- [ ] git config 설정
+- [ ] git init / add / commit
+- [ ] remote 연결 / push
+- [ ] GitHub 저장소 확인
+
+---
+
+## 3) 수행 로그
+
+## 3-1. 터미널 조작 로그
+
+```bash
+$ pwd
+/Users/hkkim01035750/E1-1
+# 현재 위치
+
+$ ls
+CHECKLIST.md    dockerfile      README.md
+# 파일과 디렉토리 목록
+
+$ ls -al
+total 112
+drwxr-xr-x   6 hkkim01035750  hkkim01035750    192 Apr  2 12:11 .
+drwxr-x---+ 26 hkkim01035750  hkkim01035750    832 Apr  2 11:48 ..
+drwxr-xr-x  12 hkkim01035750  hkkim01035750    384 Mar 31 14:17 .git
+-rw-r--r--   1 hkkim01035750  hkkim01035750  42247 Apr  2 12:11 CHECKLIST.md
+-rw-r--r--   1 hkkim01035750  hkkim01035750     95 Mar 31 13:23 dockerfile
+-rw-r--r--   1 hkkim01035750  hkkim01035750   7638 Apr  2 12:13 README.md
+
+
+$ mkdir -p ~/workstation/project
+# 상위 디렉토리가 없으면 자동으로 만들면서 디렉토리를 생성
+
+$ cd ~/workstation/project
+
+$ pwd
+/Users/hkkim01035750/workstation/project
+
+$ cd ..
+
+$ pwd
+/Users/hkkim01035750/workstation
+# 부모 디텍토리
+
+$ cd ~
+$ pwd
+/Users/hkkim01035750
+# 홈 디렉토리
+
+
+$ cd -
+$ pwd
+~/workstation/project
+# 이전 디렉토리
+
+$ touch test.txt
+# 빈 파일 생성 & 파일 수정 시간 업데이트
+
+$ ls -al test.txt
+-rw-r--r--  1 hkkim01035750  hkkim01035750  0 Apr  2 13:00 test.txt
+
+$ touch file1.txt file2.txt file3.txt
+# 여러 파일 한 번에 생성
+
+$ touch -t 202401151030 test.txt
+# 특정 시간으로 설정 (2024년 1월 15일 10:30)
+
+$ ls -al test.txt
+-rw-r--r--  1 hkkim01035750  hkkim01035750  0 Jan 15  2024 test.txt
+
+$ cat test.txt
+# 단일 파일 내용 출력
+
+$ cat file1.txt file2.txt file3.txt
+# 여러 파일 내용 순서대로 출력
+
+$ cat > newfile.txt
+Hello, World!
+This is a test.
+# 직접 입력하며 파일 생성 (Ctrl+D로 종료)
+
+$ cat >> newfile.txt
+aaaaa
+bbbbb
+ccccc
+# 기존 파일에 추가로 입력
+
+$ cat newfile.txt
+Hello, World!
+This is a test.
+aaaaa
+bbbbb
+ccccc
+
+$ cat > config.txt << EOF
+server=localhost
+port=8080
+debug=true
+EOF
+# 히어독(<<EOF) 방식 입력 종료 신호 (EOF)
+
+$ cp source.txt destination.txt
+# 파일 복사
+
+$ mv file.txt /path/to/directory/
+# 다른 디렉토리로 파일 이동
+
+$ mv file.txt file1.txt
+# 파일 이름 변경
+
+$ rm test.txt
+# 파일 삭제
+
+$ rm -i test.txt
+remove test.txt? y
+# 삭제 전 확인
+
+$ rm -r directory_with_files
+# 디렉토리와 내용 모두 삭제
+
+$ rm -f test.txt
+# 강제 삭제 (확인 없이) (-f: force)
+
+
+```
+
+## 3-2. 권한 변경 로그
+
+```bash
+$ touch test_file.txt
+
+$ ls -l test_file.txt
+-rw-r--r--  1 hkkim01035750  hkkim01035750  0 Apr  2 12:37 test_file.txt
+
+$ chmod 777 test_file.txt
+# 권한 변경
+
+$ ls -l test_file.txt
+-rwxrwxrwx  1 hkkim01035750  hkkim01035750  0 Apr  2 12:37 test_file.txt
+
+$ mkdir test_dir
+
+$ ls -ld test_dir
+drwxr-xr-x  2 hkkim01035750  hkkim01035750  64 Apr  2 12:48 test_dir
+# 디렉토리 자체 정보 확인
+
+$ chmod 777 test_dir
+
+$ ls -ld test_dir
+drwxrwxrwx  2 hkkim01035750  hkkim01035750  64 Apr  2 12:50 test_dir
+
+```
+### 알아두면 좋을 정보
+#### ls -al 출력 정보 상세 설명
+
+`ls -al`은 현재 디렉토리의 모든 파일/폴더를 상세 정보와 함께 표시합니다.
+
+#### 출력 예시
+```
+drwxr-xr-x  5 user  group   4096 Jan 15 10:30 .
+drwxr-xr-x 15 root  root    4096 Jan 10 09:20 ..
+-rw-r--r--  1 user  group    256 Jan 15 10:25 file.txt
+drwxr-xr-x  3 user  group   4096 Jan 15 10:30 folder
+```
+
+#### 각 열의 의미
+
+| 항목 | 예시 | 설명 |
+|------|------|------|
+| **1열** | `drwxr-xr-x` | 파일 타입과 권한 |
+| **2열** | `5` | 링크 수 (하드링크 개수) |
+| **3열** | `user` | 파일 소유자 |
+| **4열** | `group` | 파일 소유 그룹 |
+| **5열** | `4096` | 파일 크기 (바이트) |
+| **6~8열** | `Jan 15 10:30` | 수정 날짜와 시간 |
+| **9열** | `file.txt` | 파일/폴더명 |
+
+#### 1열 상세 분석: `drwxr-xr-x`
+
+```
+d rwx r-x r-x
+│ │   │   │
+│ │   │   └─ 기타 사용자 권한
+│ │   └───── 그룹 권한
+│ └───────── 소유자 권한
+└─────────── 파일 타입
+```
+
+#### 파일 타입
+- `d` : 디렉토리 (directory)
+- `-` : 일반 파일
+- `l` : 심볼릭 링크
+- `b` : 블록 디바이스
+- `c` : 문자 디바이스
+
+#### 권한 (rwx)
+- `r` (read) : 읽기 권한 (4)
+- `w` (write) : 쓰기 권한 (2)
+- `x` (execute) : 실행 권한 (1)
+- `-` : 권한 없음
+
+## 3-3. Docker 운영/검증 로그
+
+```bash
+$ docker --version
+Docker version 28.5.2, build ecc6942
+
+$ docker info
+Client:
+ Version:    28.5.2
+ Context:    orbstack
+ Debug Mode: false
+ Plugins:
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.29.1
+    Path:     /Users/hkkim01035750/.docker/cli-plugins/docker-buildx
+  compose: Docker Compose (Docker Inc.)
+    Version:  v2.40.3
+    Path:     /Users/hkkim01035750/.docker/cli-plugins/docker-compose
+
+Server:
+ Containers: 1
+  Running: 0
+  Paused: 0
+  Stopped: 1
+ Images: 1
+ Server Version: 28.5.2
+ Storage Driver: overlay2
+  Backing Filesystem: btrfs
+  Supports d_type: true
+  Using metacopy: false
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local splunk syslog
+ CDI spec directories:
+  /etc/cdi
+  /var/run/cdi
+ Swarm: inactive
+ Runtimes: runc io.containerd.runc.v2
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 1c4457e00facac03ce1d75f7b6777a7a851e5c41
+ runc version: d842d7719497cc3b774fd71620278ac9e17710e0
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: builtin
+  cgroupns
+ Kernel Version: 6.17.8-orbstack-00308-g8f9c941121b1
+ Operating System: OrbStack
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 6
+ Total Memory: 15.67GiB
+ Name: orbstack
+ ID: b952bb99-0bdb-4eb7-9eee-16a7802bf6d4
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Experimental: false
+ Insecure Registries:
+  ::1/128
+  127.0.0.0/8
+ Live Restore Enabled: false
+ Product License: Community Engine
+ Default Address Pools:
+   Base: 192.168.97.0/24, Size: 24
+   Base: 192.168.107.0/24, Size: 24
+   Base: 192.168.117.0/24, Size: 24
+   Base: 192.168.147.0/24, Size: 24
+   Base: 192.168.148.0/24, Size: 24
+   Base: 192.168.155.0/24, Size: 24
+   Base: 192.168.156.0/24, Size: 24
+   Base: 192.168.158.0/24, Size: 24
+   Base: 192.168.163.0/24, Size: 24
+   Base: 192.168.164.0/24, Size: 24
+   Base: 192.168.165.0/24, Size: 24
+   Base: 192.168.166.0/24, Size: 24
+   Base: 192.168.167.0/24, Size: 24
+   Base: 192.168.171.0/24, Size: 24
+   Base: 192.168.172.0/24, Size: 24
+   Base: 192.168.181.0/24, Size: 24
+   Base: 192.168.183.0/24, Size: 24
+   Base: 192.168.186.0/24, Size: 24
+   Base: 192.168.207.0/24, Size: 24
+   Base: 192.168.214.0/24, Size: 24
+   Base: 192.168.215.0/24, Size: 24
+   Base: 192.168.216.0/24, Size: 24
+   Base: 192.168.223.0/24, Size: 24
+   Base: 192.168.227.0/24, Size: 24
+   Base: 192.168.228.0/24, Size: 24
+   Base: 192.168.229.0/24, Size: 24
+   Base: 192.168.237.0/24, Size: 24
+   Base: 192.168.239.0/24, Size: 24
+   Base: 192.168.242.0/24, Size: 24
+   Base: 192.168.247.0/24, Size: 24
+   Base: fd07:b51a:cc66:d000::/56, Size: 64
+
+WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set
+
+$ docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+4f55086f7dd0: Pull complete 
+Digest: sha256:452a468a4bf985040037cb6d5392410206e47db9bf5b7278d281f94d1c2d0931
+Status: Downloaded newer image for hello-world:latest
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+
+To try something more ambitious, you can run an Ubuntu container with:
+ $ docker run -it ubuntu bash
+
+Share images, automate workflows, and more with a free Docker ID:
+ https://hub.docker.com/
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
+
+$ docker images
+REPOSITORY    TAG       IMAGE ID       CREATED       SIZE
+hello-world   latest    e2ac70e7319a   9 days ago    10.1kB
+ubuntu        latest    f794f40ddfff   5 weeks ago   78.1MB
+
+$ docker run -it --name my-container ubuntu bash
+# Ubuntu 이미지를 기반으로 my-container라는 이름의 새 컨테이너를 만들고, 대화형 터미널로 bash 셸에 접속
+
+$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED         STATUS         PORTS     NAMES
+ef48d8d1145e   ubuntu    "bash"    7 seconds ago   Up 7 seconds             my-container
+# 현재 실행 중인 컨테이너만 표시
+
+$ docker ps -a
+CONTAINER ID   IMAGE         COMMAND       CREATED              STATUS                      PORTS     NAMES
+ef48d8d1145e   ubuntu        "bash"        About a minute ago   Up About a minute                     my-container
+abbe0a306b53   hello-world   "/hello"      3 minutes ago        Exited (0) 3 minutes ago              mystifying_mccarthy
+6ff4c6992680   ubuntu        "/bin/bash"   42 hours ago         Exited (137) 40 hours ago             gracious_leakey
+# 모든 컨테이너 표시 (실행 중 + 중지된 것)
+
+$ docker logs my-container
+root@ef48d8d1145e:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@ef48d8d1145e:/# ls -al
+total 16
+drwxr-xr-x   1 root root   6 Apr  2 04:40 .
+drwxr-xr-x   1 root root   6 Apr  2 04:40 ..
+-rwxr-xr-x   1 root root   0 Apr  2 04:40 .dockerenv
+lrwxrwxrwx   1 root root   7 Apr 22  2024 bin -> usr/bin
+drwxr-xr-x   1 root root   0 Apr 22  2024 boot
+drwxr-xr-x   5 root root 340 Apr  2 04:40 dev
+drwxr-xr-x   1 root root  56 Apr  2 04:40 etc
+drwxr-xr-x   1 root root  12 Feb 17 02:09 home
+lrwxrwxrwx   1 root root   7 Apr 22  2024 lib -> usr/lib
+lrwxrwxrwx   1 root root   9 Apr 22  2024 lib64 -> usr/lib64
+drwxr-xr-x   1 root root   0 Feb 17 02:02 media
+drwxr-xr-x   1 root root   0 Feb 17 02:02 mnt
+drwxr-xr-x   1 root root   0 Feb 17 02:02 opt
+dr-xr-xr-x 226 root root   0 Apr  2 04:40 proc
+drwx------   1 root root  30 Feb 17 02:09 root
+drwxr-xr-x   1 root root  22 Feb 17 02:09 run
+lrwxrwxrwx   1 root root   8 Apr 22  2024 sbin -> usr/sbin
+drwxr-xr-x   1 root root   0 Feb 17 02:02 srv
+dr-xr-xr-x  11 root root   0 Apr  2 04:40 sys
+drwxrwxrwt   1 root root   0 Feb 17 02:09 tmp
+drwxr-xr-x   1 root root  10 Feb 17 02:02 usr
+drwxr-xr-x   1 root root  90 Feb 17 02:09 var
+
+$ docker stats --no-stream
+CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O         BLOCK I/O     PIDS
+ef48d8d1145e   my-container   0.00%     4.449MiB / 15.67GiB   0.03%     1.13kB / 126B   9.49MB / 0B   1
+# 실행 중인 컨테이너의 자원 사용량을 확인하는 명령어
+
+```
+
+---
+
+## 4) Dockerfile 기반 웹 서버 컨테이너
+
+## 4-1. 폴더 구조
+
+```text
+.
+├─ app/
+│  └─ index.html
+├─ Dockerfile
+└─ README.md
+```
+
+## 4-2. Dockerfile
+
+```dockerfile
+# 여기에 최종 Dockerfile 붙여넣기
+```
+
+## 4-3. 빌드/실행 로그
+
+```bash
+docker build -t my-web:1.0 .
+docker run -d --name my-web -p 8080:80 my-web:1.0
+docker ps
+docker logs my-web
+```
+
+```text
+# 실행 결과 붙여넣기
+```
+
+---
+
+## 5) 포트 매핑 접속 증거
+
+## 5-1. 브라우저 접속
+
+- 접속 주소: http://localhost:8080
+- 증거 이미지:
+  - ![포트매핑-8080](images/port-8080.png)
+
+## 5-2. curl 응답
+
+```bash
+curl http://localhost:8080
+```
+
+```text
+# 응답 결과 붙여넣기
+```
+
+---
+
+## 6) 바인드 마운트 & 볼륨 영속성 검증
+
+## 6-1. 바인드 마운트
+
+```bash
+# 예시
+docker run -d --name mount-test -v ~/workstation/web-data:/app/data ubuntu sleep infinity
+docker exec mount-test cat /app/data/data.txt
+```
+
+```text
+# 변경 전/후 비교 결과 붙여넣기
+```
+
+## 6-2. 볼륨 영속성
+
+```bash
+# 예시
+docker volume create mydata
+docker run -d --name vol-test1 -v mydata:/data ubuntu sleep infinity
+docker exec vol-test1 sh -lc "echo hi > /data/hello.txt && cat /data/hello.txt"
+docker rm -f vol-test1
+
+docker run -d --name vol-test2 -v mydata:/data ubuntu sleep infinity
+docker exec vol-test2 cat /data/hello.txt
+```
+
+```text
+# 컨테이너 삭제 전/후 결과 붙여넣기
+```
+
+---
+
+## 7) Git 설정 및 GitHub 연동
+
+## 7-1. Git 설정
+
+```bash
+git config --global user.name "<YOUR_NAME>"
+git config --global user.email "<YOUR_EMAIL>"
+git config --global init.defaultBranch main
+git config --list
+```
+
+```text
+# 결과 붙여넣기 (민감정보 마스킹)
+```
+
+## 7-2. 저장소 연동 및 푸시
+
+```bash
+git init
+git add .
+git commit -m "docs: add workstation mission report"
+git remote add origin https://github.com/<USER>/<REPO>.git
+git push -u origin main
+```
+
+## 7-3. 연동 증거
+
+- GitHub 저장소 화면:
+  - ![github-repo](images/github-repo.png)
+- (선택) VS Code 연동 화면:
+  - ![vscode-github](images/vscode-github.png)
+
+---
+
+## 8) 트러블슈팅 (최소 2건)
+
+## 문제 1)
+
+- 문제: cat > newtext.txt 할 때 
+- 원인 가설:
+- 확인 방법:
+- 해결/대안:
+
+```bash
+# 관련 명령/로그
+```
+
+## 문제 2)
+
+- 문제:
+- 원인 가설:
+- 확인 방법:
+- 해결/대안:
+
+```bash
+# 관련 명령/로그
+```
+
+---
+
+## 9) 보안 점검
+
+- [ ] 토큰/비밀번호/개인키/인증코드 노출 없음
+- [ ] 스크린샷 내 민감정보 마스킹 완료
+- [ ] 의심 정보 제거 및 재발급(필요 시)
+
+---
+
+## 10) 최종 제출
+
+- GitHub Repository 링크:
+- 제출 일시:
+- 최종 점검 완료 여부: [ ]
