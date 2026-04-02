@@ -108,19 +108,19 @@ git version 2.53.0
 
 - [x] hello-world 실행
 - [x] ubuntu 컨테이너 진입/명령 실행
-- [ ] attach vs exec 차이 정리
+- [x] attach vs exec 차이 정리
 
 ### 2-5. Dockerfile 기반 커스텀 이미지
 
-- [ ] Dockerfile 작성
-- [ ] docker build 성공
-- [ ] docker run 성공
+- [x] Dockerfile 작성
+- [x] docker build 성공
+- [x] docker run 성공
 
 ### 2-6. 포트 매핑
 
-- [ ] `-p <host>:<container>` 실행
-- [ ] 브라우저 접속 확인
-- [ ] curl 응답 확인
+- [x] `-p <host>:<container>` 실행
+- [x] 브라우저 접속 확인
+- [x] curl 응답 확인
 
 ### 2-7. 마운트/볼륨
 
@@ -129,10 +129,10 @@ git version 2.53.0
 
 ### 2-8. Git/GitHub 연동
 
-- [ ] git config 설정
-- [ ] git init / add / commit
-- [ ] remote 연결 / push
-- [ ] GitHub 저장소 확인
+- [x] git config 설정
+- [x] git init / add / commit
+- [x] remote 연결 / push
+- [x] GitHub 저장소 확인
 
 ---
 
@@ -517,6 +517,7 @@ $ docker stats --no-stream
 CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O         BLOCK I/O     PIDS
 ef48d8d1145e   my-container   0.00%     4.449MiB / 15.67GiB   0.03%     1.13kB / 126B   9.49MB / 0B   1
 # 실행 중인 컨테이너의 자원 사용량을 확인하는 명령어
+# --no-steam : 한번만 현재 상태 찍고 종료
 
 $ docker ps -a | grep hello-world
 abbe0a306b53   hello-world   "/hello"      38 minutes ago   Exited (0) 38 minutes ago             mystifying_mccarthy
@@ -604,11 +605,6 @@ root@ef48d8d1145e:/# ls
 bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
 ```
 
-
-
-
-
-
 ### 알면 좋은 내용
 
 #### docker run 옵션 이해
@@ -635,7 +631,7 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 # 포그라운드 (foreground) - 터미널에서 직접 보임
 docker run ubuntu echo "Hello"
 
-# 백그라운드 (background) - 컨테이너 ID 반환
+# 백그라운드 (background) - 컨테이너 ID 반환 - 호스트 pc에서 백그라운드, 컨테이너에서는 포어그라운드
 docker run -d ubuntu sleep 1000
 
 # 대화형 - 컨테이너 내부 쉘 접속
@@ -649,28 +645,6 @@ docker run -d -p 8080:80 nginx
 
 # 환경 변수 설정
 docker run -e APP_ENV=production ubuntu
-```
-
-#### 컨테이너 생명주기
-
-```
-docker run (create + start)
-   ↓
-   ├─→ Foreground 모드: 출력 표시, 직접 상호작용
-   │      ↓
-   │   docker stop (정지)
-   │      ↓
-   │   Exited (종료)
-   │
-   └─→ Background 모드 (-d): 백그라운드 실행
-          ↓
-       Running (실행 중)
-          ↓
-       docker stop (정지)
-          ↓
-       Exited (종료)
-          ↓
-       docker rm (삭제)
 ```
 
 #### 컨테이너 상태 확인
@@ -694,7 +668,6 @@ docker logs -f <container_id>
 # 리소스 사용량 보기
 docker stats
 ```
-
 
 ---
 
@@ -897,9 +870,18 @@ docker exec mount-test cat /app/data/data.txt
 ## 6-2. 볼륨 영속성
 
 ```bash
-# 예시
-docker volume create mydata
-docker run -d --name vol-test1 -v mydata:/data ubuntu sleep infinity
+$ docker volume create mydata
+mydata
+# 볼륨 생성
+
+$ docker volume ls
+DRIVER    VOLUME NAME
+local     mydata
+
+
+$ docker run -d --name vol-test1 -v mydata:/data ubuntu sleep infinity
+
+
 docker exec vol-test1 sh -lc "echo hi > /data/hello.txt && cat /data/hello.txt"
 docker rm -f vol-test1
 
@@ -907,9 +889,7 @@ docker run -d --name vol-test2 -v mydata:/data ubuntu sleep infinity
 docker exec vol-test2 cat /data/hello.txt
 ```
 
-```text
-# 컨테이너 삭제 전/후 결과 붙여넣기
-```
+
 
 ---
 
@@ -941,21 +921,81 @@ branch.main.merge=refs/heads/main
 $ git remote -v
 origin  https://github.com/hkk-cody/E1-1.git (fetch)
 origin  https://github.com/hkk-cody/E1-1.git (push)
-
 ```
 
 ## 7-2. 연동 증거
 
-- GitHub 저장소 화면:
-  - ![github-repo](images/github-repo.png)
-- (선택) VS Code 연동 화면:
-  - ![vscode-github](images/vscode-github.png)
+- VS Code 연동 화면:
+  - ![vscode-github](assets/vscode.png)
+
+## 7-3. Git vs GitHub 차이점
+
+### 🔧 Git (로컬 버전 관리)
+**"당신의 컴퓨터에서 작동하는 도구"**
+
+```
+내 컴퓨터
+├── 작업 폴더 (Working Directory)
+├── 스테이징 영역 (Staging Area)
+└── 저장소 (Repository) ← Git이 관리
+```
+
+**주요 기능:**
+- 파일 변경 이력 추적
+- 이전 버전으로 돌아가기
+- 브랜치로 독립적 작업
+- 로컬에서만 작동
+
+**명령어 예시:**
+```bash
+git add .              # 변경사항 스테이징
+git commit -m "메시지" # 버전 저장
+git log               # 이력 확인
+```
 
 ---
 
-## 8) 트러블슈팅 (최소 2건)
+### 🌐 GitHub (원격 협업 플랫폼)
+**"Git 저장소를 클라우드에 올려놓는 서비스"**
 
-## 문제 1)
+```
+GitHub 클라우드
+├── 원격 저장소 (Remote Repository)
+├── Pull Request (코드 리뷰)
+├── Issues (이슈 관리)
+└── 팀 협업 기능
+```
+
+**주요 기능:**
+- 로컬 저장소를 온라인에 백업
+- 팀원과 코드 공유
+- Pull Request로 코드 리뷰
+- 프로젝트 관리 및 협업
+
+**명령어 예시:**
+```bash
+git push origin main   # GitHub에 업로드
+git pull origin main   # GitHub에서 다운로드
+git clone <URL>       # 원격 저장소 복제
+```
+
+---
+
+## 📊 비교표
+
+| 항목 | Git | GitHub |
+|------|-----|--------|
+| **설치** | 필수 설치 | 웹 기반 (설치 불필요) |
+| **위치** | 로컬 컴퓨터 | 클라우드 서버 |
+| **협업** | 불가능 | 가능 (여러 사람) |
+| **백업** | 내 컴퓨터만 | 온라인 백업 |
+| **코드 리뷰** | 불가능 | PR로 가능 |
+
+---
+
+## 8) 트러블슈팅
+
+### 문제 1)
 
 - 문제: docker attach 후 컨테이너 종료 안하고 연결 끊는 방법이 적용이 안되는 문제
 - 원인 가설: vscode 터미널 사용 시 단축키 (ctrl + p, ctrl + q)를 하면 잘 안되는 이유가 vscode 터미널에서 하는 것 때문일거라 예상
@@ -971,14 +1011,21 @@ ef48d8d1145e   ubuntu    "bash"    About an hour ago   Up 22 seconds            
 ```
 
 
-## 문제 2)
+### 문제 2)
 
-- 문제:
-- 원인 가설:
-- 확인 방법:
-- 해결/대안:
+- 문제: 컨테이너에서 nginx 실행 시 nginx -g 'daemon off;'를 안해도 문제가 없는 이유
+- 원인 가설: 컨테이너가 종료되지 않고 정상적으로 컨테이너가 실행되는 것이 이미 어떤 동작으로 인해 가능할거라 예상
+- 확인 방법: `docker inspect <image>`를 통해서 해당 명령어가 base image에 포함된 것을 확인, dockerhub에서도 레이어 확인 가능
+- 해결/대안: 명확하게 원인을 알게 됐습니다.
 
 ```bash
-# 관련 명령/로그
+$ docker inspect my-web
+    "Cmd": [
+        "nginx",
+        "-g",
+        "daemon off;"
+    ],
 ```
+![dockerhub](assets/dockerhub.png)
+
 
