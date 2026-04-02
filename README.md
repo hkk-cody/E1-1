@@ -330,7 +330,7 @@ d rwx r-x r-x
 - `x` (execute) : 실행 권한 (1)
 - `-` : 권한 없음
 
-## 3-3. Docker 운영/검증 로그
+## 3-3. Docker 운영/검증 실행 실습 로그
 
 ```bash
 $ docker --version
@@ -433,7 +433,8 @@ Server:
    Base: fd07:b51a:cc66:d000::/56, Size: 64
 
 WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set
-
+```
+```bash
 $ docker run hello-world
 Unable to find image 'hello-world:latest' locally
 latest: Pulling from library/hello-world
@@ -509,13 +510,191 @@ dr-xr-xr-x  11 root root   0 Apr  2 04:40 sys
 drwxrwxrwt   1 root root   0 Feb 17 02:09 tmp
 drwxr-xr-x   1 root root  10 Feb 17 02:02 usr
 drwxr-xr-x   1 root root  90 Feb 17 02:09 var
+root@ef48d8d1145e:/# echo hello
+hello
 
 $ docker stats --no-stream
 CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O         BLOCK I/O     PIDS
 ef48d8d1145e   my-container   0.00%     4.449MiB / 15.67GiB   0.03%     1.13kB / 126B   9.49MB / 0B   1
 # 실행 중인 컨테이너의 자원 사용량을 확인하는 명령어
 
+$ docker ps -a | grep hello-world
+abbe0a306b53   hello-world   "/hello"      38 minutes ago   Exited (0) 38 minutes ago             mystifying_mccarthy
+
+$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED             STATUS          PORTS     NAMES
+ef48d8d1145e   ubuntu    "bash"    About an hour ago   Up 13 minutes             my-container
+
+$ docker stop my-container 
+my-container
+
+$ docker rm gracious_leakey
+# 종료된 컨테이너 1개 삭제
+
+$ docker rm -f gracious_leakey
+# 실행 중인 컨테이너 강제 삭제
+
+$ docker container prune
+WARNING! This will remove all stopped containers.
+Are you sure you want to continue? [y/N] y
+Deleted Containers:
+ef48d8d1145e64b3f68e56b273e0fb573994610c166bbea4a35251b7d1ee9ecc
+abbe0a306b5324f30d657d0072d76028cc6cace1c15df8b5961eb51bf448dc95
+6ff4c6992680f3aff3c1cb75e63c57d5081dfaf928406f57b57e22d4b4174021
+# 종료된 컨테이너 전체 삭제
+
+$ docker ps -a          
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+$ docker image ls
+REPOSITORY    TAG       IMAGE ID       CREATED       SIZE
+hello-world   latest    e2ac70e7319a   9 days ago    10.1kB
+ubuntu        latest    f794f40ddfff   5 weeks ago   78.1MB
+
+$ docker rmi hello-world
+Untagged: hello-world:latest
+Untagged: hello-world@sha256:452a468a4bf985040037cb6d5392410206e47db9bf5b7278d281f94d1c2d0931
+Deleted: sha256:e2ac70e7319a02c5a477f5825259bd118b94e8b02c279c67afa63adab6d8685b
+Deleted: sha256:897b3f2a7c1bc2f3d02432f7892fe31c6272c521ad4d70257df624504a3238b4
+# 참조 중이 아닌 이미지 삭제
+
+$ docker rmi  -f hello-world
+# 참조 중인 이미지 강제 삭제
+
+$ docker image ls       
+REPOSITORY   TAG       IMAGE ID       CREATED       SIZE
+ubuntu       latest    f794f40ddfff   5 weeks ago   78.1MB
+
+$ docker image prune
+# 사용하지 않는 이미지 정리
+
+$ docker system prune
+# 미사용 리소스 정리(dangling 이미지(태그없고 참조안되는)만 삭제)
+
+$ docker system prune -a
+WARNING! This will remove:
+  - all stopped containers
+  - all networks not used by at least one container
+  - all images without at least one container associated to them
+  - all build cache
+
+Are you sure you want to continue? [y/N] 
+# 미사용 리소스 정리(unreferenced 이미지(태그있지만 참조안되는)까지 모두 삭제)
 ```
+
+
+
+### attach
+- 기존 프로세스에 직접 연결
+- 기존 컨테이너에 영향
+- 컨테이너 종료안하고 연결 끊는 방법
+    - `ctrl + p, ctrl + q`
+```bash
+docker attach my-container
+```
+
+### exec
+- 컨테이너 내부에 새 프로세스 생성
+- 기존 서비스 그대로 유지
+- 명령 끝나면 새 프로세스만 종료
+- 안전하게 내부 확인 가능
+```
+hkkim01035750@c5r1s7 E1-1 % docker exec -it my-container /bin/bash
+root@ef48d8d1145e:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+```
+
+
+
+
+
+
+### 알면 좋은 내용
+
+#### docker run 옵션 이해
+
+```bash
+docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```
+
+**자주 사용하는 옵션:**
+
+| 옵션     | 설명                            |
+| -------- | ------------------------------- |
+| `-d`     | Detach (백그라운드 실행)        |
+| `-it`    | Interactive + TTY (터미널 접속) |
+| `--name` | 컨테이너에 이름 부여            |
+| `-p`     | 포트 매핑 (호스트:컨테이너)     |
+| `-v`     | 볼륨 마운트                     |
+| `-e`     | 환경 변수 설정                  |
+| `--rm`   | 종료 시 자동 삭제               |
+
+#### 실행 예시
+
+```bash
+# 포그라운드 (foreground) - 터미널에서 직접 보임
+docker run ubuntu echo "Hello"
+
+# 백그라운드 (background) - 컨테이너 ID 반환
+docker run -d ubuntu sleep 1000
+
+# 대화형 - 컨테이너 내부 쉘 접속
+docker run -it ubuntu /bin/bash
+
+# 이름과 함께 실행
+docker run --name my-container ubuntu sleep 100
+
+# 특정 포트로 웹 서버 실행
+docker run -d -p 8080:80 nginx
+
+# 환경 변수 설정
+docker run -e APP_ENV=production ubuntu
+```
+
+#### 컨테이너 생명주기
+
+```
+docker run (create + start)
+   ↓
+   ├─→ Foreground 모드: 출력 표시, 직접 상호작용
+   │      ↓
+   │   docker stop (정지)
+   │      ↓
+   │   Exited (종료)
+   │
+   └─→ Background 모드 (-d): 백그라운드 실행
+          ↓
+       Running (실행 중)
+          ↓
+       docker stop (정지)
+          ↓
+       Exited (종료)
+          ↓
+       docker rm (삭제)
+```
+
+#### 컨테이너 상태 확인
+
+```bash
+# 실행 중인 컨테이너만 보기
+docker ps
+
+# 모든 컨테이너 보기 (종료된 것 포함)
+docker ps -a
+
+# 마지막 5개 컨테이너
+docker ps -n 5
+
+# 컨테이너 로그 확인
+docker logs <container_id>
+
+# 실시간 로그 보기
+docker logs -f <container_id>
+
+# 리소스 사용량 보기
+docker stats
+```
+
 
 ---
 
@@ -610,27 +789,33 @@ docker exec vol-test2 cat /data/hello.txt
 ## 7-1. Git 설정
 
 ```bash
-git config --global user.name "<YOUR_NAME>"
-git config --global user.email "<YOUR_EMAIL>"
-git config --global init.defaultBranch main
-git config --list
+$ git config --global user.name "hkk"
+$ git config --global user.email "hkkim0103@naver.com"
+$ git config --global init.defaultBranch main
+
+$ git config --list
+credential.helper=osxkeychain
+user.name=hkk
+user.email=hkkim0103@naver.com
+init.defaultbranch=main
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+core.ignorecase=true
+core.precomposeunicode=true
+remote.origin.url=https://github.com/hkk-cody/E1-1.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
+
+$ git remote -v
+origin  https://github.com/hkk-cody/E1-1.git (fetch)
+origin  https://github.com/hkk-cody/E1-1.git (push)
+
 ```
 
-```text
-# 결과 붙여넣기 (민감정보 마스킹)
-```
-
-## 7-2. 저장소 연동 및 푸시
-
-```bash
-git init
-git add .
-git commit -m "docs: add workstation mission report"
-git remote add origin https://github.com/<USER>/<REPO>.git
-git push -u origin main
-```
-
-## 7-3. 연동 증거
+## 7-2. 연동 증거
 
 - GitHub 저장소 화면:
   - ![github-repo](images/github-repo.png)
@@ -643,14 +828,19 @@ git push -u origin main
 
 ## 문제 1)
 
-- 문제: cat > newtext.txt 할 때 
-- 원인 가설:
-- 확인 방법:
-- 해결/대안:
+- 문제: docker attach 후 컨테이너 종료 안하고 연결 끊는 방법이 적용이 안되는 문제
+- 원인 가설: vscode 터미널 사용 시 단축키 (ctrl + p, ctrl + q)를 하면 잘 안되는 이유가 vscode 터미널에서 하는 것 때문일거라 예상
+- 확인 방법: 리서치 후 vscode에서 사용 시 단축키 우선순위로 인해 안먹히는 것을 확인
+- 해결/대안: 맥 터미널에서 실행하면 정상적으로 작동
 
 ```bash
-# 관련 명령/로그
+hkkim01035750@c5r1s7 ~ % docker attach my-container
+root@ef48d8d1145e:/# read escape sequence
+hkkim01035750@c5r1s7 ~ % docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED             STATUS          PORTS     NAMES
+ef48d8d1145e   ubuntu    "bash"    About an hour ago   Up 22 seconds             my-container
 ```
+
 
 ## 문제 2)
 
@@ -663,18 +853,3 @@ git push -u origin main
 # 관련 명령/로그
 ```
 
----
-
-## 9) 보안 점검
-
-- [ ] 토큰/비밀번호/개인키/인증코드 노출 없음
-- [ ] 스크린샷 내 민감정보 마스킹 완료
-- [ ] 의심 정보 제거 및 재발급(필요 시)
-
----
-
-## 10) 최종 제출
-
-- GitHub Repository 링크:
-- 제출 일시:
-- 최종 점검 완료 여부: [ ]
