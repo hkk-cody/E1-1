@@ -330,6 +330,51 @@ d rwx r-x r-x
 - `x` (execute) : 실행 권한 (1)
 - `-` : 권한 없음
 
+#### 8진수 권한 표기법 이해
+
+```
+r w x  = 4 + 2 + 1 = 7  (모든 권한)
+r - x  = 4 + 0 + 1 = 5  (읽기, 실행)
+r w -  = 4 + 2 + 0 = 6  (읽기, 쓰기)
+r - -  = 4 + 0 + 0 = 4  (읽기만)
+```
+
+#### 절대 경로 vs 상대 경로
+
+**절대 경로** (Absolute Path)
+
+- 루트(`/`)에서부터 시작하는 전체 경로
+- 어느 위치에서든 동일
+
+```bash
+/Users/hankkim/workstation/project
+/home/username/documents
+/opt/app
+```
+
+**상대 경로** (Relative Path)
+
+- 현재 위치(`.`)를 기준으로 한 경로
+- 위치에 따라 달라짐
+
+```bash
+./project          # 현재 디렉토리의 project
+../documents       # 상위 디렉토리의 documents
+../../file.txt     # 2단계 상위 디렉토리의 file.txt
+```
+
+#### 자주 사용하는 특수 경로
+
+```bash
+~              # 홈 디렉토리 (/Users/username 또는 /home/username)
+.              # 현재 디렉토리
+..             # 상위 디렉토리
+/              # 루트 디렉토리
+$HOME          # 홈 디렉토리 (변수)
+$PWD           # 현재 디렉토리 (변수)
+```
+
+
 ## 3-3. Docker 운영/검증 실행 실습 로그
 
 ```bash
@@ -607,6 +652,20 @@ bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  s
 
 ### 알면 좋은 내용
 
+#### Docker 주요 개념
+
+**이미지 (Image)**
+
+- 컨테이너를 만들기 위한 "설계도" 또는 "템플릿"
+- 재사용 가능하고, 변경 불가능한(immutable) 스냅샷
+- 레이어 구조로 구성됨
+
+**컨테이너 (Container)**
+
+- 이미지에서 만들어진 "실행 인스턴스"
+- 격리된 프로세스 환경에서 독립적으로 실행
+- 여러 개를 동시에 실행 가능
+
 #### docker run 옵션 이해
 
 ```bash
@@ -746,6 +805,7 @@ my-web       1.0       ee932089033b   7 minutes ago   62.2MB
 $ docker run -d --name my-web -p 8080:80 my-web:1.0
 5522ca90b323a8811268f786c77c46919d80c3cee1a18c0a0ebce158624423cc
 # 컨테이너 id(고유 식별자)
+
 $ docker ps
 CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                     NAMES
 5522ca90b323   my-web:1.0   "/docker-entrypoint.…"   2 minutes ago   Up 2 minutes   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   my-web
@@ -773,7 +833,6 @@ $ docker logs my-web
 2026/04/02 07:39:50 [notice] 1#1: start worker process 34
 2026/04/02 07:39:50 [notice] 1#1: start worker process 35
 ```
-
 
 ---
 
@@ -826,6 +885,27 @@ $  curl http://localhost:8081
   </body>
 </html>
 ```
+
+## 5-4. port 매핑 확인
+```bash
+$ docker port my-web
+80/tcp -> 0.0.0.0:8080
+80/tcp -> [::]:8080
+```
+```bash
+$ docker inspect my-web | grep IPAddress
+            "SecondaryIPAddresses": null,
+            "IPAddress": "192.168.215.2",
+                    "IPAddress": "192.168.215.2",
+# 컨테이너 IP 주소 확인
+
+$ docker exec my-web netstat -tlnp
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      1/nginx: master pro
+tcp        0      0 :::80                   :::*                    LISTEN      1/nginx: master pro
+# 컨테이너 내부에서 포트 확인
+```
+
 ### 알면 좋은 내용
 
 #### 포트 매핑 이해
@@ -853,6 +933,19 @@ port 8080    ──────────→  port 80
 2. **접근성**: 호스트에서 컨테이너 서비스에 접근하려면 매핑 필요
 3. **여러 컨테이너**: 같은 컨테이너 포트를 다른 호스트 포트로 매핑 가능
 
+#### 이미지 검사
+
+```bash
+# 이미지 상세 정보 확인
+docker inspect my-web:1.0
+
+# 이미지 히스토리 확인 (레이어 정보)
+docker history my-web:1.0
+
+# 이미지 용량 자세히 보기
+docker system df
+```
+
 ## 6) 바인드 마운트 & 볼륨 영속성 검증
 
 ## 6-1. 바인드 마운트
@@ -863,9 +956,10 @@ docker run -d --name mount-test -v ~/workstation/web-data:/app/data ubuntu sleep
 docker exec mount-test cat /app/data/data.txt
 ```
 
-```text
-# 변경 전/후 비교 결과 붙여넣기
-```
+
+
+
+
 
 ## 6-2. 볼륨 영속성
 
@@ -878,18 +972,72 @@ $ docker volume ls
 DRIVER    VOLUME NAME
 local     mydata
 
-
 $ docker run -d --name vol-test1 -v mydata:/data ubuntu sleep infinity
 
 
-docker exec vol-test1 sh -lc "echo hi > /data/hello.txt && cat /data/hello.txt"
-docker rm -f vol-test1
 
-docker run -d --name vol-test2 -v mydata:/data ubuntu sleep infinity
-docker exec vol-test2 cat /data/hello.txt
+# TODO!!!!!!!!!
+
+
 ```
 
+### 알면 좋은 내용
 
+#### 바인드 마운트 vs 볼륨
+
+| 구분           | 바인드 마운트      | Docker 볼륨            |
+| -------------- | ------------------ | ---------------------- |
+| 위치           | 호스트의 임의 위치 | Docker이 관리하는 위치 |
+| 성능           | 낮음 (OS 오버헤드) | 높음 (Docker 최적화)   |
+| 관리           | 수동               | 자동                   |
+| 사용 목적      | 개발 중 파일 공유  | 프로덕션 데이터 영속성 |
+| 삭제 시 데이터 | 호스트에만 남음    | 별도 명령으로 삭제     |
+
+#### 바인드 마운트 구문
+
+```bash
+# 기본 형식
+-v <host_path>:<container_path>
+
+# 읽기 전용 마운트
+-v <host_path>:<container_path>:ro
+
+# 예시
+docker run -v /home/user/data:/app/data ubuntu
+docker run -v $(pwd)/source:/app/source:ro ubuntu
+docker run -v ~/documents:/documents ubuntu
+```
+
+#### Docker 볼륨 구문
+
+```bash
+# 기본 형식
+-v <volume_name>:<container_path>
+
+# 예시
+docker run -v mydata:/data ubuntu
+docker run -v mydb:/var/lib/mysql mysql
+docker run -v logs:/app/logs node-app
+```
+
+#### 볼륨 관리 명령어
+
+```bash
+# 볼륨 생성
+docker volume create mydata
+
+# 볼륨 목록
+docker volume ls
+
+# 볼륨 정보 확인
+docker volume inspect mydata
+
+# 사용하지 않는 볼륨 정리
+docker volume prune
+
+# 특정 볼륨 삭제
+docker volume rm mydata
+```
 
 ---
 
