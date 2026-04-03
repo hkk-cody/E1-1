@@ -1,6 +1,5 @@
-# AI/SW 개발 워크스테이션 구축
 
-## 0) 프로젝트 개요
+# 0) 프로젝트 개요
 
 - 미션 목표 요약:
   - 본 프로젝트의 목표는 터미널, Docker, Git/GitHub를 직접 설정하고 운영하면서, 재현 가능한 개발 워크스테이션을 구축하는 것입니다.
@@ -18,7 +17,7 @@
 
 ---
 
-## 1) 실행 환경
+# 1) 실행 환경
 
 - OS: macOS (Darwin 24.6.0, x86_64)
 - Shell: /bin/zsh
@@ -27,7 +26,7 @@
 - Git: 2.53.0
 - OrbStack / Docker Desktop: OrbStack (Docker Context: orbstack)
 
-### 1-1. 환경 확인 로그
+## 1-1. 환경 확인 로그
 
 ```bash
 uname -a
@@ -82,52 +81,52 @@ git version 2.53.0
 
 ---
 
-## 2) 수행 체크리스트
+# 2) 수행 체크리스트
 
-### 2-1. 터미널 기본 조작
+## 2-1. 터미널 기본 조작
 
 - [x] pwd / ls / ls -la
 - [x] mkdir / cd
 - [x] touch / cat
 - [x] cp / mv / rm
 
-### 2-2. 권한 실습
+## 2-2. 권한 실습
 
 - [x] 파일 권한 변경 (예: 644)
 - [x] 디렉토리 권한 변경 (예: 755)
 - [x] 변경 전/후 비교 기록
 
-### 2-3. Docker 기본 점검
+## 2-3. Docker 기본 점검
 
 - [x] docker --version
 - [x] docker info
 - [x] docker images
 - [x] docker ps / docker ps -a
 
-### 2-4. 컨테이너 기초
+## 2-4. 컨테이너 기초
 
 - [x] hello-world 실행
 - [x] ubuntu 컨테이너 진입/명령 실행
 - [x] attach vs exec 차이 정리
 
-### 2-5. Dockerfile 기반 커스텀 이미지
+## 2-5. Dockerfile 기반 커스텀 이미지
 
 - [x] Dockerfile 작성
 - [x] docker build 성공
 - [x] docker run 성공
 
-### 2-6. 포트 매핑
+## 2-6. 포트 매핑
 
 - [x] `-p <host>:<container>` 실행
 - [x] 브라우저 접속 확인
 - [x] curl 응답 확인
 
-### 2-7. 마운트/볼륨
+## 2-7. 마운트/볼륨
 
-- [ ] 바인드 마운트 변경 반영 확인
-- [ ] 볼륨 영속성(삭제 전/후) 확인
+- [x] 바인드 마운트 변경 반영 확인
+- [x] 볼륨 영속성(삭제 전/후) 확인
 
-### 2-8. Git/GitHub 연동
+## 2-8. Git/GitHub 연동
 
 - [x] git config 설정
 - [x] git init / add / commit
@@ -136,7 +135,7 @@ git version 2.53.0
 
 ---
 
-## 3) 수행 로그
+# 3) 수행 로그
 
 ## 3-1. 터미널 조작 로그
 
@@ -177,7 +176,6 @@ $ cd ~
 $ pwd
 /Users/hkkim01035750
 # 홈 디렉토리
-
 
 $ cd -
 $ pwd
@@ -251,7 +249,6 @@ $ rm -r directory_with_files
 
 $ rm -f test.txt
 # 강제 삭제 (확인 없이) (-f: force)
-
 
 ```
 
@@ -628,8 +625,6 @@ Are you sure you want to continue? [y/N]
 # 미사용 리소스 정리(unreferenced 이미지(태그있지만 참조안되는)까지 모두 삭제)
 ```
 
-
-
 ### attach
 - 기존 프로세스에 직접 연결
 - 기존 컨테이너에 영향
@@ -730,7 +725,7 @@ docker stats
 
 ---
 
-## 4) Dockerfile 기반 웹 서버 컨테이너
+# 4) Dockerfile 기반 웹 서버 컨테이너
 
 ## 4-1. 폴더 구조
 
@@ -836,7 +831,7 @@ $ docker logs my-web
 
 ---
 
-## 5) 포트 매핑 접속 증거
+# 5) 포트 매핑 접속 증거
 
 ## 5-1. 브라우저 접속
 
@@ -946,20 +941,59 @@ docker history my-web:1.0
 docker system df
 ```
 
-## 6) 바인드 마운트 & 볼륨 영속성 검증
+# 6) 바인드 마운트 & 볼륨 영속성 검증
 
 ## 6-1. 바인드 마운트
 
 ```bash
-# 예시
-docker run -d --name mount-test -v ~/workstation/web-data:/app/data ubuntu sleep infinity
-docker exec mount-test cat /app/data/data.txt
+$ mkdir -p ~/workstation/web-data
+# 연결할 작업 디렉토리 생성
+
+$ echo "Initial content" > ~/workstation/web-data/data.txt
+# 테스트 파일 생성
+
+$ docker run -d -v ~/workstation/web-data:/app/data --name mount-test ubuntu sleep 1000
+afaeaeb102b77fc9a2048c9e974e9f4a31987341e0d6ca555830099c18ef060c
+# 바인드 마운트로 컨테이너 실행
+
+$ docker exec mount-test cat /app/data/data.txt
+Initial content
+# 호스트에서 생성한 파일이 잘 보이는 것을 확인
+
+$ echo "Modified from host" >> ~/workstation/web-data/data.txt
+# 호스트에서 파일 수정
+
+$ cat ~/workstation/web-data/data.txt
+Initial content
+Modified from host
+# 데이터 확인
+
+$ docker exec mount-test cat /app/data/data.txt
+Initial content
+Modified from host
+# 컨테이너에서 변경 사항 확인
+
+$ docker exec mount-test bash -c "echo 'Created in container' > /app/data/newfile.txt"
+# 컨테이너에서 파일 생성
+
+$ ls ~/workstation/web-data/
+data.txt        newfile.txt
+# 호스트에서 생성된 파일 확인
+
+$ cat ~/workstation/web-data/newfile.txt
+Created in container
+# 생성된 파일 내용 확인
+
+$ docker stop mount-test
+$ docker rm mount-test
+
+$ ls ~/workstation/web-data/
+data.txt        newfile.txt
+
+$ cat ~/workstation/web-data/newfile.txt
+Created in container
+# 컨테이너 종료, 삭제 후에도 호스트는 파일이 그대로 있는 것을 확인
 ```
-
-
-
-
-
 
 ## 6-2. 볼륨 영속성
 
@@ -972,12 +1006,36 @@ $ docker volume ls
 DRIVER    VOLUME NAME
 local     mydata
 
-$ docker run -d --name vol-test1 -v mydata:/data ubuntu sleep infinity
+$ docker run -d -v mydata:/data --name vol-test1 ubuntu sleep 1000
+46c2d6cafe8bcfff9ea669439e03470e053601391b9e40192f452e483462fe4c
+# 볼륨 연결
 
+$ docker exec vol-test1 bash -c "echo 'Important data' > /data/important.txt"
+# 컨테이너 내에서 데이터 작성
 
+$ docker exec vol-test1 cat /data/important.txt
+Important data
+# 데이터 확인
 
-# TODO!!!!!!!!!
+$ docker run -d -v mydata:/data --name vol-test2 ubuntu sleep 1000
+8fe7a5c685fe90d789659892bc5bef63f1c1475d9d6a1e47b1620adb21ae834a
 
+$ docker exec vol-test2 cat /data/important.txt
+Important data
+# 다른 컨테이너에서 같은 볼륨 마운트에 정보 확인
+
+$ docker exec vol-test2 bash -c "echo 'More data' >> /data/important.txt"
+# 두 번째 컨테이너에서 데이터 변경
+
+$ docker exec vol-test2 cat /data/important.txt
+Important data
+More data
+# 변경된 데이터 확인
+
+$ docker exec vol-test1 cat /data/important.txt
+Important data
+More data
+# 첫 번째 컨테이너에서 데이터 확인
 
 ```
 
@@ -1041,7 +1099,7 @@ docker volume rm mydata
 
 ---
 
-## 7) Git 설정 및 GitHub 연동
+# 7) Git 설정 및 GitHub 연동
 
 ## 7-1. Git 설정
 
@@ -1141,9 +1199,9 @@ git clone <URL>       # 원격 저장소 복제
 
 ---
 
-## 8) 트러블슈팅
+# 8) 트러블슈팅
 
-### 문제 1)
+## 문제 1)
 
 - 문제: docker attach 후 컨테이너 종료 안하고 연결 끊는 방법이 적용이 안되는 문제
 - 원인 가설: vscode 터미널 사용 시 단축키 (ctrl + p, ctrl + q)를 하면 잘 안되는 이유가 vscode 터미널에서 하는 것 때문일거라 예상
@@ -1159,7 +1217,7 @@ ef48d8d1145e   ubuntu    "bash"    About an hour ago   Up 22 seconds            
 ```
 
 
-### 문제 2)
+## 문제 2)
 
 - 문제: 컨테이너에서 nginx 실행 시 nginx -g 'daemon off;'를 안해도 문제가 없는 이유
 - 원인 가설: 컨테이너가 종료되지 않고 정상적으로 컨테이너가 실행되는 것이 이미 어떤 동작으로 인해 가능할거라 예상
@@ -1175,5 +1233,9 @@ $ docker inspect my-web
     ],
 ```
 ![dockerhub](assets/dockerhub.png)
+
+
+# 9) 회고
+
 
 
