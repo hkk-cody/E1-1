@@ -609,10 +609,15 @@ REPOSITORY   TAG       IMAGE ID       CREATED       SIZE
 ubuntu       latest    f794f40ddfff   5 weeks ago   78.1MB
 
 $ docker image prune
-# 사용하지 않는 이미지 정리
+# dangling 이미지, 사용중이지 않은 이미지 삭제
 
 $ docker system prune
-# 미사용 리소스 정리(dangling 이미지(태그없고 참조안되는)만 삭제)
+WARNING! This will remove:
+  - all stopped containers
+  - all networks not used by at least one container
+  - all dangling images
+  - unused build cache
+# Dangling 이미지 + 중지된 컨테이너 + 네트워크 모두 삭제
 
 $ docker system prune -a
 WARNING! This will remove:
@@ -622,7 +627,7 @@ WARNING! This will remove:
   - all build cache
 
 Are you sure you want to continue? [y/N] 
-# 미사용 리소스 정리(unreferenced 이미지(태그있지만 참조안되는)까지 모두 삭제)
+# 미사용 리소스 정리 모두 삭제
 ```
 
 ### attach
@@ -722,6 +727,32 @@ docker logs -f <container_id>
 # 리소스 사용량 보기
 docker stats
 ```
+
+#### Dangling 이미지란
+- **태그가 없는 이미지** (`<none>:<none>`)
+- 태그가 지정되지 않아 더 이상 특정 이미지나 활성 컨테이너와 연결되지 않은 이미지
+- REPOSITORY와 TAG가 모두 <none>으로 표시되는 이미지
+```bash
+$ docker build -t myapp:latest .
+$ docker images                 
+REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
+myapp        latest    ee932089033b   47 hours ago   62.2MB
+$ docker build -t myapp:latest .
+# 두번째 이미지 빌드 시 dockerfile을 첫번째와 다르게 해야한다.
+# 같은 dockerfile로 빌드 시 캐시를 사용해서 같은 이미지 생성 (id가 바뀌지 않는다.)
+
+$ docker images                 
+REPOSITORY   TAG       IMAGE ID       CREATED         SIZE
+myapp        latest    4df373e8ccda   2 seconds ago   62.2MB
+<none>       <none>    ee932089033b   47 hours ago    62.2MB
+
+$ docker build --no-cache -t myapp:latest .
+# 캐시 무시하고 이미지 빌드하는 방법
+```
+
+#### 사용 중이지 않은 이미지 (Unused)란
+- **태그는 있지만 실행 중인 컨테이너가 없는 이미지**
+- 예: `myapp:1.0` 이미지가 존재하지만 이를 사용하는 컨테이너가 없음
 
 ---
 
